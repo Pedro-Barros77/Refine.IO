@@ -2,20 +2,45 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using static Enums;
 
 public class PlayerController : MonoBehaviour
 {
     #region TankAttributes
     [SerializeField]
     private float tankSpeed, steeringPower, turretRotationSpeed, tankFireDelay, tankBulletSpeed, tankHealth, tankCannonDamage;
-    public float TankSpeed { get { return tankSpeed * 10; } }
-    public float SteeringPower { get { return steeringPower * 10; } }
-    public float TurretRotationSpeed { get { return turretRotationSpeed * 10; } }
-    public float TankFireDelay { get { return tankFireDelay; } }
-    public float TankBulletSpeed { get { return tankBulletSpeed; } }
-    public float TankHealth { get { return tankHealth; } }
+    /// <summary>
+    /// The current movement speed of player's tank.
+    /// </summary>
+    public float TankSpeed => tankSpeed * 10;
+    /// <summary>
+    /// The current force that the player's tank can steer (rotate force)
+    /// </summary>
+    public float SteeringPower => steeringPower * 10;
+    /// <summary>
+    /// The current rotation speed of the tank's turret.
+    /// </summary>
+    public float TurretRotationSpeed => turretRotationSpeed * 10;
+    /// <summary>
+    /// The current time in seconds to wait before another fire from the tank's main turret.
+    /// </summary>
+    public float TankFireDelay => tankFireDelay;
+    /// <summary>
+    /// The current movement speed of the turret's bullet.
+    /// </summary>
+    public float TankBulletSpeed => tankBulletSpeed;
+    /// <summary>
+    /// The current health points of the player's tank.
+    /// </summary>
+    public float TankHealth => tankHealth;
+    /// <summary>
+    /// The total health points of the player's tank. It's equal to the health at the start of the game.
+    /// </summary>
     public float TankTotalHealth { get; private set; }
-    public float TankCannonDamage { get { return tankCannonDamage; } }
+    /// <summary>
+    /// The current damage of the bullet from the tank's main turret.
+    /// </summary>
+    public float TankCannonDamage => tankCannonDamage;
 
 
 
@@ -25,13 +50,30 @@ public class PlayerController : MonoBehaviour
     #region HumanAttributes
     [SerializeField]
     private float humanSpeed, humanHealth, axeDamage, pickAxeDamage, humanMeleeDelay, humanMeleeRadius;
-    public float HumanSpeed { get { return humanSpeed * 10; } }
-    public float HumanHealth { get { return humanHealth; } }
+    /// <summary>
+    /// The player's current movement speed, when on foot.
+    /// </summary>
+    public float HumanSpeed => humanSpeed * 10;
+    /// <summary>
+    /// The player's current health points, when on foot.
+    /// </summary>
+    public float HumanHealth => humanHealth;
+    /// <summary>
+    /// The player's total health points, when on foot.
+    /// </summary>
     public float HumanTotalHealth { get; private set; }
-    public float AxeDamage { get { return axeDamage; } }
-    public float PickAxeDamage { get { return pickAxeDamage; } }
-    public float HumanMeleeDelay { get { return humanMeleeDelay; } }
-    public float HumanMeleeRadius { get { return humanMeleeRadius; } }
+    public float AxeDamage => axeDamage;
+    public float PickAxeDamage => pickAxeDamage;
+    /// <summary>
+    /// The current time in seconds to wait before another melee hit from the player, when on foot.
+    /// </summary>
+    public float HumanMeleeDelay => humanMeleeDelay;
+    /// <summary>
+    /// The current radius of the melee hit from the player, when on foot.
+    /// </summary>
+    public float HumanMeleeRadius => humanMeleeRadius;
+
+    public MeleeWeaponController MeleeController => meleeWeaponController;
 
     float startHumanSpeed;
     #endregion
@@ -45,17 +87,10 @@ public class PlayerController : MonoBehaviour
     public bool engineOn { get; private set; } = true;
     bool baseDoorRange;
     DateTime lastHitTime;
-    enum HandedTool
-    {
-        None = 0,
-        Axe = 1,
-        PickAxe = 2
-    }
-    HandedTool handedTool;
     #endregion
 
     #region CommonProperties
-    [SerializeField] Transform axeTransform, pickAxeTransform;
+    [SerializeField] MeleeWeaponController meleeWeaponController;
     Transform tankTransform, humanTransform;
     Rigidbody2D RB;
     Animator animator;
@@ -77,7 +112,6 @@ public class PlayerController : MonoBehaviour
         sceneLoader = GameObject.Find("SceneLoader").GetComponent<SceneLoader>();
         tankTransform.gameObject.SetActive(true);
         humanTransform.gameObject.SetActive(false);
-        handedTool = HandedTool.None;
 
         if (sceneLoader.GetSceneIndex() == 1)
         {
@@ -89,6 +123,7 @@ public class PlayerController : MonoBehaviour
 
     void Update()
     {
+        Debug.Log(isInTank);
         if (Input.GetKeyDown(KeyCode.F))
         {
             if (!isInTank && Vector2.Distance(humanTransform.position, tankTransform.position) < tankEnterDistance)
@@ -126,7 +161,7 @@ public class PlayerController : MonoBehaviour
     //Função chamada pela animação ao chegar ao frame que atinge o alvo
     void GetHitColliders()
     {
-        Collider2D[] hitColliders = Physics2D.OverlapCircleAll(GetToolHitPoint(), humanMeleeRadius, entityLayer);
+        Collider2D[] hitColliders = Physics2D.OverlapCircleAll(MeleeController.GetHitPoint(), humanMeleeRadius, entityLayer);
         if (hitColliders != null)
         {
             //Causa dano em todas as entidades atingidas pelo hit
@@ -136,41 +171,10 @@ public class PlayerController : MonoBehaviour
 
                 if (entity != null)
                 {
-                    entity.TakeDamage(GetToolDamage());
+                    entity.TakeDamage(MeleeController.GetDamage(entity.MeleeTarget));
                 }
             }
         }
-    }
-
-    //Retorna a posição da ponta da ferramenta atual na mão
-    Vector3 GetToolHitPoint()
-    {
-        var hitPoint = new Vector3();
-        switch (handedTool)
-        {
-            case HandedTool.Axe:
-                hitPoint = axeTransform.Find("HitPoint").position;
-                break;
-            case HandedTool.PickAxe:
-                hitPoint = pickAxeTransform.Find("HitPoint").position;
-                break;
-        }
-        return hitPoint;
-    }
-
-    float GetToolDamage()
-    {
-        float dmg = 0;
-        switch (handedTool)
-        {
-            case HandedTool.Axe:
-                dmg = AxeDamage;
-                break;
-            case HandedTool.PickAxe:
-                dmg = pickAxeDamage;
-                break;
-        }
-        return dmg;
     }
 
     public void TakeDamage(float damage)
@@ -256,8 +260,8 @@ public class PlayerController : MonoBehaviour
             if (!isInWater)
             {
                 entityInRange = true;
-                axeTransform.gameObject.SetActive(true);
-                handedTool = HandedTool.Axe;
+                MeleeController.gameObject.SetActive(true);
+                MeleeController.SetWeapon(MeleeWeaponType.Axe);
             }
         }
         if (collision.CompareTag("Rock") && !isInTank)
@@ -268,8 +272,7 @@ public class PlayerController : MonoBehaviour
             if (!isInWater)
             {
                 entityInRange = true;
-                pickAxeTransform.gameObject.SetActive(true);
-                handedTool = HandedTool.PickAxe;
+                MeleeController.SetWeapon(MeleeWeaponType.Pickaxe);
             }
         }
 
@@ -294,7 +297,7 @@ public class PlayerController : MonoBehaviour
                 baseDoorRange = false;
             }
         }
-        if (collision.CompareTag("Tree"))
+        if (collision.CompareTag("Tree") && !isInTank)
         {
             var msg = collision.GetComponentInChildren<LocalMessage>();
             if (msg != null) msg.Hide();
@@ -303,17 +306,15 @@ public class PlayerController : MonoBehaviour
             var treeSprite = collision.GetComponent<SpriteRenderer>();
             var color = new Color32(255, 255, 255, 255);
             treeSprite.color = color;
-            axeTransform.gameObject.SetActive(false);
-            handedTool = HandedTool.None;
+            MeleeController.SetWeapon(MeleeWeaponType.Fists);
         }
-        if (collision.CompareTag("Rock"))
+        if (collision.CompareTag("Rock") && !isInTank)
         {
             var msg = collision.transform.parent.GetComponentInChildren<LocalMessage>();
             if (msg != null) msg.Hide();
 
             entityInRange = false;
-            pickAxeTransform.gameObject.SetActive(false);
-            handedTool = HandedTool.None;
+            MeleeController.SetWeapon(MeleeWeaponType.Fists);
         }
     }
 }

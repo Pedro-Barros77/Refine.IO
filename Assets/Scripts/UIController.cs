@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -85,7 +86,7 @@ public class UIController : MonoBehaviour
         sourcePos.Translate(direction * Time.deltaTime * 1000);
         sourcePos.position = new Vector3(Mathf.Clamp(sourcePos.position.x, indicatorWidth / 1.5f, Screen.width - indicatorWidth / 1.5f),
                                                   Mathf.Clamp(sourcePos.position.y, indicatorHeight, Screen.height - indicatorHeight / 1.5f), 0);
-        
+
         sourcePos.gameObject.SetActive(!isTargetVisible(target));
     }
 
@@ -117,6 +118,7 @@ public class UIController : MonoBehaviour
     public void SetHealthBar(float health, float maxHealth, Slider slider)
     {
         var fillBar = (health * 100 / maxHealth) / 100;
+
         slider.value = fillBar;
         slider.maxValue = 1;
 

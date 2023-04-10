@@ -1,13 +1,16 @@
 using UnityEngine;
 using UnityEngine.UI;
+using static Enums;
 
 public class EntityObject : MonoBehaviour
 {
     public WorldBuilder.EntityType type;
+    public MeleeTargetType MeleeTarget => meleeTarget;
     public float Health = 10;
     [SerializeField] bool hasLocalMessage;
     [SerializeField] AudioClip[] HitClips;
     [SerializeField] Sprite[] Sprites;
+    [SerializeField] MeleeTargetType meleeTarget;
 
     float totalHealth, colorTime = 1;
     bool isAlive = true;
